@@ -1,0 +1,38 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}交易紀錄{% endblock %}
+
+{% block body %}
+    <table class="table table-striped" style="margin-top: 50px;">
+
+        <thead>
+            <tr>
+                <td></td>
+                <td>存款</td>
+                <td>提款</td>
+                <td style="width: 260px;">餘額</td>
+                <td style="width: 160px;">時間</td>
+                <td style="width: 120px;">註記</td>
+
+            </tr>
+        </thead>
+
+        <tbody>
+            {% if (details|length) > 0 %}
+                {% for detail in details %}
+                    <tr class='clickable-row'>
+                        <td>{{ loop.index == 1 ? '1(最新資料)':loop.index }}</td>
+                        <td>{{ detail.action == 'Deposit' ? detail.money:'' }}</td>
+                        <td>{{ detail.action == 'Withdrawal' ? detail.money:'' }}</td>
+                        <td style="color: red">{{ detail.currentBalance }}</td>
+                        <td>{{ detail.date|date("Y/m/d") }}</td>
+                        <td>{{ detail.remark }}</td>
+                    </tr>
+                {% endfor %}
+            {% else %}
+                <td colspan="6">No Data!</td>
+            {% endif %}
+        </tbody>
+
+    </table>
+{% endblock %}

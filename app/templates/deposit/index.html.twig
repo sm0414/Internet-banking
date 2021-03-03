@@ -1,0 +1,80 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}存款{% endblock %}
+
+{% block stylesheets %}
+    <style>
+        #sign{
+            width: 10px;
+            height: 20px;
+            background-color: #00994e;
+            float: left;
+            margin-top: 2px;
+            margin-right: 3px;
+        }
+
+        #information{
+            background-color: white;
+            height: 300px;
+            box-shadow: 0px 5px 15px -10px rgba(0,0,0,0.55);
+        }
+
+        #content{
+            margin: auto;
+            margin-top: 50px;
+        }
+    </style>
+{% endblock %}
+
+{% block body %}
+    <div id="content" class="col-6">
+
+        <div>
+            <div id="sign"></div>
+            <h5>存款</h5>
+        </div>
+
+        <div id="information">
+            <div class="col-8" style="margin :auto;">
+                {{ form_start(form, { 'attr': {'style': 'padding-top: 18px;'} }) }}
+                    {{ form_label(form.money, null,
+                        { 'label_attr': {'style': 'margin-bottom: 0;'}})
+                    }}
+                        <span class="invalid-feedback" style="display: none;">
+                            <sapn class="form-error-icon badge badge-danger text-uppercase">ERROR</sapn>
+                            <sapn class="form-error-message"></sapn>
+                        </span>
+                    {{ form_widget(form.money, { 'attr': {'style': 'margin-bottom: 12px;'} }) }}
+                    {{ form_errors(form.money) }}
+                    {{ form_row(form.remark) }}
+                {{ form_end(form) }}
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block javascripts %}
+    <script>
+        $("#deposit_sumbit").click(function(event) {
+            var money = $("#deposit_money").val();
+
+            var rule = /[^0]\d+/;
+
+            if (money > 0 && rule.test(money)) {
+                if(money % 1000 != 0){
+                    $(".invalid-feedback").addClass("d-block");
+                    $(".form-error-message").html("請輸入1000之倍數");
+                    event.preventDefault();
+                    return false;
+                }else{
+                    $('form').submit();
+                }
+            }else{
+                $(".invalid-feedback").addClass("d-block");
+                $(".form-error-message").html("請輸入有效數值");
+                event.preventDefault();
+                return false;
+            }
+        });
+    </script>
+{% endblock %}

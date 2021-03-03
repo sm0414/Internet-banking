@@ -1,0 +1,380 @@
+<?php
+
+namespace App\Controller;
+
+use App\Entity\Detail;
+use App\Entity\User;
+use App\Message\AddDetail;
+use App\Repository\DetailRepository;
+use App\Repository\UserRepository;
+use Exception;
+use Symfony\Component\Cache\Adapter\RedisAdapter;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\KernelInterface;
+use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\Security\Core\Encoder\UserPasswordEncoderInterface;
+use Symfony\Component\Validator\Validator\ValidatorInterface;
+
+/**
+ * @Route("/api", name="api.")
+ */
+class ApiController extends AbstractController
+{
+    /**
+     * @Route("/", name="index", methods={"GET"})
+     */
+    public function index(): Response
+    {
+        $redis = RedisAdapter::createConnection('redis://redis-service');
+
+        return new Response($redis->get('name'));
+    }
+
+    /**
+     * @Route("/users/show", name="users_show", methods={"GET"})
+     * @param UserRepository $userRepository
+     * @return Json
+     */
+    public function getAllUsers(UserRepository $userRepository): Response
+    {
+        $usersArray = $userRepository->getAllUsers();
+
+        return $this->json($usersArray);
+    }
+
+    /**
+     * @Route("/user/show/{userId}", name="user_show_id", methods={"GET"})
+     * @param Number $userId
+     * @param UserRepository $userRepository
+     * @return Json|String
+     */
+    public function getOneUser($userId, UserRepository $userRepository): Response
+    {
+        $user = $userRepository->getOneUser($userId);
+
+        return $this->json($user);
+    }
+
+    /**
+     * @Route("/details/show", name="users_details_show", methods={"GET"})
+     * @param DetailRepository $detailRepository
+     * @return Json
+     */
+    public function getAllUsersDetails(DetailRepository $detailRepository): Response
+    {
+        $detailsArray = $detailRepository->getAllUsersDetails();
+
+        return $this->json($detailsArray);
+    }
+
+    /**
+     * @Route("/user_details/show/{userId}", name="user_details_show_id", methods={"GET"})
+     * @param Number $userId
+     * @param DetailRepository $detailRepository
+     * @return Json|String
+     */
+    public function getOneUserDetail($userId, DetailRepository $detailRepository): Response
+    {
+        $detailArray = $detailRepository->getOneUserDetail($userId);
+
+        return $this->json($detailArray);
+    }
+
+    /**
+     * @Route("/user/create/{username}/{password}", name="user_create", methods={"POST"})
+     * @param String $username
+     * @param String $password
+     * @param UserPasswordEncoderInterface $passwordEncoder
+     * @param ValidatorInterface $validator
+     * @return Json
+     */
+    public function createUser($username, $password, UserPasswordEncoderInterface $passwordEncoder, ValidatorInterface $validator)
+    {
+        $user = new User();
+        $user->setUsername($username)
+            ->setPassword($password)
+            ->setRoles(['ROLE_USER'])
+            ->setBalance(0);
+
+        // 驗證用戶名和密碼是否合格
+        $errors = $validator->validate($user);
+
+        // 用戶名或密碼不合格則輸出錯誤
+        if (count($errors) > 0) {
+            $errorsArray = [];
+
+            foreach ($errors as $error) {
+                $errorsArray[] = $error->getMessage();
+            }
+
+            return $this->json($errorsArray);
+        }
+
+        // 密碼符合格式則Hash密碼
+        $user->setPassword(
+            $passwordEncoder->encodePassword($user, $password)
+        );
+
+        $em = $this->getDoctrine()->getManager();
+        $em->persist($user);
+        $em->flush();
+
+        $userArray = [
+            'id' => $user->getId(),
+            'userName' => $user->getUsername(),
+            'balance' => $user->getBalance()
+        ];
+
+        return $this->json($userArray);
+    }
+
+    /**
+     * @Route("/user/update/{username}/{password}", name="user_update", methods={"PUT"})
+     * @param String $username
+     * @param String $password
+     * @param UserPasswordEncoderInterface $passwordEncoder
+     * @param ValidatorInterface $validator
+     * @return Json|String
+     */
+    public function updateUserPassword($username, $password, UserPasswordEncoderInterface $passwordEncoder, ValidatorInterface $validator)
+    {
+        $em = $this->getDoctrine()->getManager();
+
+        //  若找不到用戶則拋出異常
+        try {
+            $user = $em->getRepository(User::class)->findOneByUsername($username);
+            $user->setPassword($password);
+        } catch (Exception $e) {
+            return $this->json('user name does not exist');
+        }
+
+        // 驗證密碼是否合格
+        $errors = $validator->validate($user);
+
+        // 密碼不合格則輸出錯誤
+        if (count($errors) > 0) {
+            $errorsArray = [];
+
+            foreach ($errors as $error) {
+                $errorsArray[] = $error->getMessage();
+            }
+
+            return $this->json($errorsArray);
+        }
+
+        // 密碼符合格式則Hash密碼
+        $user->setPassword(
+            $passwordEncoder->encodePassword($user, $password)
+        );
+
+        $em = $this->getDoctrine()->getManager();
+        $em->persist($user);
+        $em->flush();
+
+        $userArray = [
+            'id' => $user->getId(),
+            'userName' => $user->getUsername(),
+            'balance' => $user->getBalance()
+        ];
+
+        return $this->json($userArray);
+    }
+
+    /**
+     * @Route("/user/delete/{username}", name="user_delete", methods={"DELETE"})
+     * @param String $username
+     * @return String
+     */
+    public function deleteUser($username)
+    {
+        $em = $this->getDoctrine()->getManager();
+
+        // 若找不到用戶則拋出異常
+        try {
+            $user = $em->getRepository(User::class)->findOneByUsername($username);
+
+            if (!$user) {
+                throw new Exception('user name does not exist');
+            }
+        } catch (Exception $e) {
+            return $this->json($e->getMessage());
+        }
+
+        $em->remove($user);
+        $em->flush();
+
+        return $this->json('User deleted：'.$username);
+    }
+
+    /**
+     * @Route("/action/deposit/{userId}", name="action_deposit", methods={"PUT"})
+     * @param Number $userId
+     * @param Request $request
+     * @param UserRepository $userRepository
+     * @return Json|String
+     */
+    public function newDeposit($userId, Request $request, UserRepository $userRepository)
+    {
+        $money = $request->request->get('money');
+        $remark = $request->request->get('remark');
+
+        $rule = "/^[^0]\d+$/";
+
+        // 輸入金額是否符合格式
+        if ($money <= 0 || $money%1000 != 0 || !preg_match($rule, $money)) {
+            return $this->json('Please enter a qualified number');
+        }
+
+        $em = $this->getDoctrine()->getManager();
+        $em->getConnection()->beginTransaction();
+
+        try {
+            $user = $em->find(User::class, $userId);
+
+            // 若找不到用戶則拋出異常
+            if (!$user) {
+                throw new Exception('user ID does not exist');
+            }
+        } catch(Exception $e) {
+            return $this->json($e->getMessage());
+        }
+
+        // 更新存款後新的帳戶餘額
+        $currentBalance = $money + $user->getBalance();
+        $user->setBalance($currentBalance);
+
+        // 存款明細放到Redis儲存
+        $redis = RedisAdapter::createConnection('redis://redis-service');
+        // 把日期Object轉String
+        $date = (new \DateTime())->format('Y-m-d');
+
+        $redis->hMSet($user->getUsername(), [
+                'action' => 'Deposit',
+                'money' => $money,
+                'remark' => $remark,
+                'currentBalance' => $currentBalance,
+                'date' => $date,
+                'userId' => $user->getId(),
+            ]
+        );
+
+        // 異步處理明細存進資料庫
+        $this->dispatchMessage(new AddDetail($user->getUsername()));
+
+        $em->persist($user);
+        $em->flush();
+        $em->getConnection()->commit();
+
+        // 回傳該用戶餘額
+        $userArray = $userRepository->getOneUser($user->getId());
+
+        return $this->json($userArray);
+    }
+
+    /**
+     * @Route("/action/withdrawal/{userId}", name="action_withdrawal", methods={"PUT"})
+     * @param Number $userId
+     * @param Request $request
+     * @param UserRepository $userRepository
+     * @return Json|String
+     */
+    public function newWithdrawal($userId, Request $request, UserRepository $userRepository)
+    {
+        $money = $request->request->get('money');
+        $remark = $request->request->get('remark');
+
+        $rule = "/^[^0]\d+$/";
+
+        // 輸入金額是否符合格式
+        if ($money <= 0 || $money%1000 != 0 || !preg_match($rule, $money)) {
+            return $this->json('Please enter a qualified number');
+        }
+
+        $em = $this->getDoctrine()->getManager();
+        $em->getConnection()->beginTransaction();
+
+        try {
+            $user = $em->find(User::class, $userId);
+
+            // 若找不到用戶則拋出異常
+            if (!$user) {
+                throw new Exception('user ID does not exist');
+            }
+        } catch (Exception $e) {
+            return $this->json($e->getMessage());
+        }
+
+        // 餘額不足
+        if ($money > $user->getBalance()) {
+            return $this->json('Insufficient balance, $' . $user->getBalance() . ' dollar left');
+        }
+
+        // 更新提款後新的帳戶餘額
+        $currentBalance = $user->getBalance() - $money;
+        $user->setBalance($currentBalance);
+
+        // 提款明細放到Redis儲存
+        $redis = RedisAdapter::createConnection('redis://redis-service');
+        // 把日期Object轉String
+        $date = (new \DateTime())->format('Y-m-d');
+
+        $redis->hMSet($user->getUsername(), [
+                'action' => 'Withdrawal',
+                'money' => $money,
+                'remark' => $remark,
+                'currentBalance' => $currentBalance,
+                'date' => $date,
+                'userId' => $user->getId(),
+            ]
+        );
+
+        // 異步處理明細存進資料庫
+        $this->dispatchMessage(new AddDetail($user->getUsername()));
+
+        $em->persist($user);
+        $em->flush();
+        $em->getConnection()->commit();
+
+
+        // 回傳該用戶餘額
+        $userArray = $userRepository->getOneUser($user->getId());
+
+        return $this->json($userArray);
+    }
+
+    /**
+     * @Route("/action/update/{detailId}/{remark?}", name="action_update", methods={"PUT"})
+     * @param Number $detailId
+     * @param String $remark
+     * @return Json|String
+     */
+    public function updateDetail($detailId, $remark = null)
+    {
+        $em = $this->getDoctrine()->getManager();
+
+        // 若找不到該詳細資料ID則拋出異常
+        try {
+            $detail = $em->find(Detail::class, $detailId);
+            $detail->setRemark($remark);
+
+            $em->persist($detail);
+            $em->flush();
+        } catch (Exception $e) {
+            return $this->json('detail ID does not exist');
+        }
+
+        $detailArray[] = [
+            'ID' => $detail->getId(),
+            'userName' => $detail->getUser()->getUsername(),
+            'Action' => $detail->getAction(),
+            'date' => $detail->getDate(),
+            'money' => $detail->getMoney(),
+            'currentBalance' => $detail->getCurrentBalance(),
+            'remark' => $detail->getRemark()
+        ];
+
+        return $this->json($detailArray);
+    }
+}

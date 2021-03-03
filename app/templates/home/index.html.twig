@@ -1,0 +1,56 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}首頁{% endblock %}
+
+{% block stylesheets %}
+<style>
+    #sign{
+        width: 10px;
+        height: 20px;
+        background-color: #00994e;
+        float: left;
+        margin-top: 2px;
+        margin-right: 3px;
+    }
+
+    #information{
+        background-color: white;
+        height: 300px;
+        box-shadow: 0px 5px 15px -10px rgba(0,0,0,0.55);
+    }
+
+    #content{
+        margin: auto;
+        margin-top: 50px;
+    }
+
+    .balance{
+        font-size: 35px;
+        color: #73B839;
+        margin-left: 150px;
+        width: 370px;
+    }
+</style>
+{% endblock %}
+
+{% block body %}
+    <div id="content" class="col-6">
+
+        <div>
+            <div id="sign"></div>
+            <h5>我的帳號總覽</h5>
+        </div>
+
+        <div id="information">
+            <div id="TD-Box" style="margin-bottom: 14px;">
+                <div style="margin-left: 80px;padding-top:30px;">
+                    <p style="float: left;margin-top: 15px;">台幣資產總額</p>
+                    <span class="balance">{{ balance }}<i style="font-size: 20px;">元</i></span>
+                </div>
+            </div>
+
+            <hr style="margin-bottom: 30px;">
+
+        </div>
+    </div>
+{% endblock %}

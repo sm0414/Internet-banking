@@ -1,0 +1,15 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}註冊{% endblock %}
+
+{% block body %}
+    <h1 class="h3 mb-3 font-weight-normal">Please Register</h1>
+    {{ form(form) }}
+{% endblock %}
+
+{% block javascriptsTwo %}
+    {{ parent() }}
+    <script>
+        $('.register').addClass('active');
+    </script>
+{% endblock %}

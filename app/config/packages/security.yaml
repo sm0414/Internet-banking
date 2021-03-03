@@ -1,0 +1,31 @@
+security:
+    encoders:
+        App\Entity\User:
+            algorithm: auto
+
+    providers:
+        # used to reload user from session & other features (e.g. switch_user)
+        app_user_provider:
+            entity:
+                class: App\Entity\User
+                property: username
+    firewalls:
+        dev:
+            pattern: ^/(_(profiler|wdt)|css|images|js)/
+            security: false
+        main:
+            anonymous: true
+            lazy: true
+            provider: app_user_provider
+            guard:
+                authenticators:
+                    - App\Security\CustomerAuthenticator
+            logout:
+                path: app_logout
+                target: app_login
+
+    access_control:
+        - { path: ^/detail, roles: ROLE_USER, requires_channel: http }
+        - { path: ^/withdrawal, roles: ROLE_USER, requires_channel: http }
+        - { path: ^/deposit, roles: ROLE_USER, requires_channel: http }
+
