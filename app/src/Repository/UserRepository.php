@@ -57,13 +57,13 @@ class UserRepository extends ServiceEntityRepository implements PasswordUpgrader
     }
 
     /**
-     * @param Number $userId
+     * @param String $username
      * @return Array|String
      */
-    public function getOneUser($userId)
+    public function getOneUser($username)
     {
         try {
-            $user = $this->find($userId);
+            $user = $this->findOneByUsername($username);
 
             if (!$user) {
                 throw new \Exception("user ID does not exist");

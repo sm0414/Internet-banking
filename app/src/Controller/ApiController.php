@@ -201,13 +201,13 @@ class ApiController extends AbstractController
     }
 
     /**
-     * @Route("/deposit/{userId}", name="action_deposit", methods={"PUT"})
-     * @param Number $userId
+     * @Route("/deposit/{username}", name="action_deposit", methods={"PUT"})
+     * @param String $username
      * @param Request $request
      * @param UserRepository $userRepository
      * @return Json|String
      */
-    public function deposit($userId, Request $request, UserRepository $userRepository)
+    public function deposit($username, Request $request, UserRepository $userRepository)
     {
         $money = $request->request->get('money');
         $remark = $request->request->get('remark');
@@ -223,7 +223,7 @@ class ApiController extends AbstractController
         $em->getConnection()->beginTransaction();
 
         try {
-            $user = $em->find(User::class, $userId);
+            $user = $em->getRepository(User::class)->findOneByUsername($username);
 
             // 若找不到用戶則拋出異常
             if (!$user) {
@@ -267,12 +267,12 @@ class ApiController extends AbstractController
 
     /**
      * @Route("/withdrawal/{userId}", name="action_withdrawal", methods={"PUT"})
-     * @param Number $userId
+     * @param String $username
      * @param Request $request
      * @param UserRepository $userRepository
      * @return Json|String
      */
-    public function withdrawal($userId, Request $request, UserRepository $userRepository)
+    public function withdrawal($username, Request $request, UserRepository $userRepository)
     {
         $money = $request->request->get('money');
         $remark = $request->request->get('remark');
@@ -288,7 +288,7 @@ class ApiController extends AbstractController
         $em->getConnection()->beginTransaction();
 
         try {
-            $user = $em->find(User::class, $userId);
+            $user = $em->getRepository(User::class)->findOneByUsername($username);
 
             // 若找不到用戶則拋出異常
             if (!$user) {
