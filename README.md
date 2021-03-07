@@ -1,5 +1,6 @@
 # <p align="center">網銀系統</p>
-
+#
+使用Symfony框架完成，提供API讓商城呼叫
 
 ### 下載後請依序執行
     $ docker-compose up -d --build
